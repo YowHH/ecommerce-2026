@@ -6,106 +6,117 @@ import { AppError } from "../../utils/AppError";
 import { User } from "../../models/User";
 import { ok } from "../../utils/envelope";
 
+export const authRouter = Router();
 
-export const authRouter = Router()
+authRouter.post(
+  "/sync",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { userId } = getAuth(req);
 
+    if (!userId) {
+      throw new AppError(401, "User is not logged in. Means unauth user!");
+    }
 
-authRouter.post('/sync', requireAuth, 
-    asyncHandler(async(req, res) => {
-        const { userId } = getAuth(req)
+    const clerkUser = await clerkClient.users.getUser(userId);
 
-        if (!userId) {
-            throw new AppError(401, 'User is not logged in. Means unauth user!')
-        }
+    const extractEmailFromUserInfo =
+      clerkUser.emailAddresses.find(
+        (item) => item.id === clerkUser.primaryEmailAddressId
+      ) || clerkUser.emailAddresses[0];
 
-        const clerkUser = await clerkClient.users.getUser(userId)
+    if (!extractEmailFromUserInfo) {
+      throw new AppError(400, "User has no email address");
+    }
 
-        const extractEmailFromUserInfo = 
-        clerkUser.emailAddresses.find(
-            item => item.id === clerkUser.primaryEmailAddressId
-        ) || clerkUser.emailAddresses[0]
+    const email = extractEmailFromUserInfo.emailAddress;
 
-        const email = extractEmailFromUserInfo.emailAddress
+    const fullName = [clerkUser.firstName, clerkUser.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
 
-        const fullName =[clerkUser.firstName, clerkUser.lastName]
-        .filter(Boolean).join("").trim()
+    const name = fullName || clerkUser.username || email.split("@")[0];
 
-        const name = fullName || clerkUser.username
+    const raw = process.env.ADMIN_EMAILS || "";
+    const adminEmails = new Set(
+      raw
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+    );
 
-        const raw = process.env.ADMIN_EMAILS || ""
-        const adminEmails = new Set (
-            raw
-                .split(",")
-                .map(item => item.trim().toLowerCase())
-                .filter(Boolean)
-        )
+    const existingUser = await User.findOne({ clerkUserId: userId });
 
-        const existingUser = await User.findOne({clerkUserId: userId})
+    const shouldBeAdmin = email ? adminEmails.has(email.toLowerCase()) : false;
 
-        const shouldBeAdmin = email ? adminEmails.has(email.toLowerCase()) : false
+    const nextRole =
+      existingUser?.role === "admin"
+        ? "admin"
+        : shouldBeAdmin
+        ? "admin"
+        : existingUser?.role || "user";
 
-        const nextRole = 
-            existingUser?.role === 'admin' ? 'admin' : 
-            shouldBeAdmin ? 'admin' : 
-            existingUser?.role || "user"
+    const newlyCreatedDbUser = await User.findOneAndUpdate(
+      { clerkUserId: userId },
+      {
+        clerkUserId: userId,
+        email,
+        name,
+        role: nextRole,
+      },
+      {
+        new: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+        runValidators: true,
+      }
+    );
 
-        const newlyCreatedDbUser = await User.findByIdAndUpdate(
-            {
-                clerkUserId : userId
-            },
-            {
-                clerkUserId : userId,
-                email,
-                name,
-                role: nextRole
-            },
-            {
-                new: true,
-                upsert: true,
-                setDefaultsOnInsert: true
-            }
-        )
+    if (!newlyCreatedDbUser) {
+      throw new AppError(500, "Failed to create/update user");
+    }
 
-        res.status(200).json(
-            ok({
-                user: {
-                    id: newlyCreatedDbUser._id,
-                    clerkUserId: newlyCreatedDbUser.clerkUserId,
-                    email: newlyCreatedDbUser.email,
-                    name: newlyCreatedDbUser.name,
-                    role: newlyCreatedDbUser.role
-                }
-            })
-        )
-    })
-)
+    res.status(200).json(
+      ok({
+        user: {
+          id: newlyCreatedDbUser._id,
+          clerkUserId: newlyCreatedDbUser.clerkUserId,
+          email: newlyCreatedDbUser.email,
+          name: newlyCreatedDbUser.name,
+          role: newlyCreatedDbUser.role,
+        },
+      })
+    );
+  })
+);
 
-authRouter.get('/me', requireAuth, 
-    asyncHandler(
-        async(req,res) => {
-            const { userId } = getAuth(req)
+authRouter.get(
+  "/me",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { userId } = getAuth(req);
 
-            if (!userId) {
-                throw new AppError(401, 'User is not logged in. Means unauth user!')
-            }
+    if (!userId) {
+      throw new AppError(401, "User is not logged in. Means unauth user!");
+    }
 
-            const dbUser = await User.findOne({clerkUserId: userId})
+    const dbUser = await User.findOne({ clerkUserId: userId });
 
-            if (!dbUser) {
-                throw new AppError(404, 'User is not found in DB')
-            }
+    if (!dbUser) {
+      throw new AppError(404, "User is not found in DB");
+    }
 
-            res.status(200).json(
-                ok({
-                    user: {
-                        id: dbUser._id,
-                        clerkUserId: dbUser.clerkUserId,
-                        email: dbUser.email,
-                        name: dbUser.name,
-                        role: dbUser.role
-                    }
-                })
-            )
-        }
-    )
-)
+    res.status(200).json(
+      ok({
+        user: {
+          id: dbUser._id,
+          clerkUserId: dbUser.clerkUserId,
+          email: dbUser.email,
+          name: dbUser.name,
+          role: dbUser.role,
+        },
+      })
+    );
+  })
+);
