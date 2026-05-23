@@ -10,7 +10,7 @@ import { RoleGuardLayout } from "./components/auth/RoleGuardLayout";
 import { AdminLayout } from "./components/layout/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProducts from "./pages/admin/Productss";
-import AdminCoupons from "./pages/admin/Coupons";
+import AdminCoupons from "./pages/admin/Promos";
 import AdminOrders from "./pages/admin/Orders";
 import AdminSettings from "./pages/admin/Settings";
 

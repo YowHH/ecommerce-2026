@@ -9,6 +9,18 @@ import { ok } from './utils/envelope';
 import { clerkMiddleware } from '@clerk/express';
 import { authRouter } from './routes/auth/auth.routes';
 import { adminProductRouter } from './routes/admin/product.routes';
+import { customerProductRouter } from './routes/customer/product.routes';
+import { customerAddressRouter } from './routes/customer/address.routes';
+import { customerPromoRouter } from './routes/customer/promo.routes';
+import { customerCartWishlistRouter } from './routes/customer/cart.-wishlist.routes';
+import { adminPromoRouter } from './routes/admin/promo.routes';
+import { adminOrderRouter } from './routes/admin/orders.routes';
+import { adminSettingsRouter } from './routes/admin/settings.routes';
+import { adminDashboardRouter } from './routes/admin/dashboard.routes';
+import { customerHomeRouter } from './routes/customer/home.routes';
+import { customerCheckoutRouter } from './routes/customer/checkout.routes';
+import { customerCheckoutWithPointsRouter } from './routes/customer/checkout-with-points';
+import { customerOrderRouter } from './routes/customer/orders.routes';
 
 async function mainEntryFunction(){
     await connectDB();
@@ -35,7 +47,20 @@ async function mainEntryFunction(){
 
     app.use("/auth", authRouter)
 
-    app.use("/admin", adminProductRouter)
+    app.use("/customer", customerHomeRouter);
+    app.use("/customer", customerProductRouter);
+    app.use("/customer", customerAddressRouter);
+    app.use("/customer", customerPromoRouter);
+    app.use("/customer", customerCartWishlistRouter);
+    app.use("/customer", customerCheckoutRouter);
+    app.use("/customer", customerCheckoutWithPointsRouter);
+    app.use("/customer", customerOrderRouter);
+
+    app.use("/admin", adminProductRouter);
+    app.use("/admin", adminPromoRouter);
+    app.use("/admin", adminOrderRouter);
+    app.use("/admin", adminSettingsRouter);
+    app.use("/admin", adminDashboardRouter);
 
     app.use(notFound)
     app.use(errorHandler)

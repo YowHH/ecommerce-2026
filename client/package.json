@@ -13,6 +13,7 @@
     "@clerk/react": "^6.6.6",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@tailwindcss/vite": "^4.3.0",
+    "@thednp/color-picker": "^2.0.4",
     "axios": "^1.16.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
